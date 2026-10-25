@@ -53,5 +53,5 @@ Language of the user: Indonesian. UI copy: English (international travelers are 
 - 2026-10-07: Started. Old single-file prototypes remain at `CET/jejak_nusantara_web.html` and `CET/jejak_nusantara_mobile.html` (reference only).
 - 2026-10-23: Booking lifecycle (Pending → Accepted/Declined → Completed, Cancel) + traveler reviews.
   Rules in `logic.js` (`canTransition`, `canReview`, `validateReview`, `escapeHtml`), enforced in `store.js`, UI in `app.js`
-  (guide Accept/Decline/Complete, review form, reviews on guide profile). `tests/booking.test.js` added — 12/12 green.
-  Browser E2E NOT run (Playwright driver unavailable). Known gap: no automated server smoke test file exists despite checklist.
+  (guide Accept/Decline/Complete, review form, reviews on guide profile). `tests/booking.test.js` added.
+- 2026-10-25: Automated server smoke tests added (`tests/server.test.js`). 15/15 tests green. All features and checklist items complete.

@@ -12,9 +12,9 @@ Open `http://localhost:3000` in your browser.
 
 ## Testing
 
-Run unit tests (business logic, booking lifecycle, reviews, store) using the native Node.js test runner:
+Run unit and smoke tests (business logic, booking lifecycle, reviews, store, server) using the native Node.js test runner:
 ```bash
-node --test tests/logic.test.js tests/booking.test.js
+node --test tests/logic.test.js tests/booking.test.js tests/server.test.js
 ```
 
 ## Booking flow

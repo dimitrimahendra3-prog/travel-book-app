@@ -1,4 +1,5 @@
 // store.js - Handles localStorage persistence and current state
+import { canTransition, canReview, validateReview } from './logic.js';
 
 const STORE_KEY = 'jejak_nusantara_data';
 
@@ -19,8 +20,12 @@ function initStore() {
 
 // Get the entire state
 function getState() {
-  const data = localStorage.getItem(STORE_KEY);
-  return data ? JSON.parse(data) : defaultState;
+  try {
+    const data = JSON.parse(localStorage.getItem(STORE_KEY));
+    return data ? { ...structuredClone(defaultState), ...data } : structuredClone(defaultState);
+  } catch {
+    return structuredClone(defaultState);
+  }
 }
 
 // Save the entire state
@@ -73,7 +78,7 @@ export const store = {
     // Generate a simple ID
     booking.id = 'BKG-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     booking.dateCreated = new Date().toISOString();
-    booking.status = 'Confirmed';
+    booking.status = 'Pending';
     
     state.bookings.push(booking);
     saveState(state);
@@ -85,14 +90,31 @@ export const store = {
   },
 
   cancelBooking(bookingId) {
+    return this.setBookingStatus(bookingId, 'Cancelled');
+  },
+
+  setBookingStatus(bookingId, status) {
     const state = getState();
     const booking = state.bookings.find(b => b.id === bookingId);
-    if (booking) {
-      booking.status = 'Cancelled';
-      saveState(state);
-      return true;
-    }
-    return false;
+    if (!booking || !canTransition(booking.status, status)) return false;
+    booking.status = status;
+    saveState(state);
+    return true;
+  },
+
+  reviewBooking(bookingId, review) {
+    const state = getState();
+    const booking = state.bookings.find(b => b.id === bookingId);
+    if (!canReview(booking) || !validateReview(review).valid) return false;
+    booking.review = { rating: review.rating, text: review.text.trim(), date: new Date().toISOString() };
+    saveState(state);
+    return true;
+  },
+
+  getUserReviews(guideId) {
+    return getState().bookings
+      .filter(b => b.guide.id === guideId && b.review)
+      .map(b => ({ name: b.travelerName || 'Traveler', from: 'Jejak Nusantara user', ...b.review }));
   }
 };
 

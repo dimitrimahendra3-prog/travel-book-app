@@ -22,8 +22,13 @@ const server = http.createServer((req, res) => {
   // Remove query strings
   filePath = filePath.split('?')[0];
   
-  // Resolve absolute path
-  const absPath = path.join(__dirname, filePath);
+  // Resolve absolute path safely
+  const absPath = path.normalize(path.join(__dirname, filePath));
+  if (!absPath.startsWith(__dirname)) {
+    res.writeHead(403);
+    res.end('403 Forbidden');
+    return;
+  }
   const ext = path.extname(absPath);
   const contentType = MIME_TYPES[ext] || 'text/plain';
 
@@ -44,7 +49,11 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
-  console.log(`Press Ctrl+C to stop`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}/`);
+    console.log(`Press Ctrl+C to stop`);
+  });
+}
+
+module.exports = { server, MIME_TYPES };

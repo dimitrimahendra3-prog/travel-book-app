@@ -69,3 +69,42 @@ export function formatIDR(amount) {
     minimumFractionDigits: 0
   }).format(amount);
 }
+
+// ====================
+// Booking lifecycle
+// ====================
+// Pending -> Accepted | Declined | Cancelled
+// Accepted -> Completed | Cancelled
+// 'Confirmed' is the legacy status from older saved data; treated like Accepted.
+const TRANSITIONS = {
+  Pending: ['Accepted', 'Declined', 'Cancelled'],
+  Accepted: ['Completed', 'Cancelled'],
+  Confirmed: ['Completed', 'Cancelled'],
+  Declined: [],
+  Completed: [],
+  Cancelled: [],
+};
+
+export function canTransition(from, to) {
+  return (TRANSITIONS[from] || []).includes(to);
+}
+
+export function canReview(booking) {
+  return !!booking && booking.status === 'Completed' && !booking.review;
+}
+
+/**
+ * Validates a review. Rating must be an integer 1-5, text 10-500 chars.
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validateReview({ rating, text } = {}) {
+  const errors = [];
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) errors.push('Rating must be between 1 and 5');
+  const len = (text || '').trim().length;
+  if (len < 10 || len > 500) errors.push('Review must be 10-500 characters');
+  return { valid: errors.length === 0, errors };
+}
+
+export function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}

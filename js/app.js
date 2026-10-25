@@ -1,11 +1,18 @@
 import { REGIONS, GUIDES, DEST_CATALOG, CATEGORIES } from './data.js';
-import { calculateTripCost, formatIDR } from './logic.js';
+import { calculateTripCost, formatIDR, canTransition, canReview, validateReview, escapeHtml } from './logic.js';
 import { store } from './store.js';
 
 const appView = document.getElementById('app-view');
 
 // Global state for explore filters
 let exploreFilters = { region: '', category: '' };
+
+const STATUS_COLORS = {
+    Pending: '#facc15', Accepted: '#4ade80', Confirmed: '#4ade80',
+    Completed: '#60a5fa', Declined: '#f87171', Cancelled: '#f87171',
+};
+const statusBadge = (s) => `<span style="color: ${STATUS_COLORS[s] || '#fff'}; font-weight: 600;">${escapeHtml(s)}</span>`;
+const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
 function router() {
     let hash = window.location.hash.slice(1) || '/';
@@ -137,9 +144,24 @@ function renderGuideProfile(guideId) {
                 </ul>
                 
                 <a href="#/build/${guide.id}" class="btn btn-primary" style="margin-top: 2rem;">Build Your Custom Trip</a>
+
+                <h3 style="margin-top: 2.5rem;">Traveler Reviews</h3>
+                ${renderReviewList([...store.getUserReviews(guide.id), ...(guide.reviews || [])])}
             </div>
         </div>
     `;
+}
+
+function renderReviewList(reviews) {
+    if (reviews.length === 0) return '<p>No reviews yet.</p>';
+    return reviews.map(r => `
+        <div class="glass-panel" style="padding: 1rem 1.25rem; margin-top: 0.75rem;">
+            <p style="margin: 0;"><strong>${escapeHtml(r.name)}</strong> · ${escapeHtml(r.from)}
+                <span style="color: #facc15; margin-left: 0.5rem;">${stars(r.rating)}</span></p>
+            <p style="margin: 0.5rem 0 0;">${escapeHtml(r.text)}</p>
+            <small style="opacity: 0.7;">${new Date(r.date).toLocaleDateString()}</small>
+        </div>
+    `).join('');
 }
 
 function renderBuild(guideId) {
@@ -274,7 +296,8 @@ function renderCheckout() {
             guide: draft.guide,
             pax: draft.pax,
             stops: draft.stops,
-            cost: draft.cost
+            cost: draft.cost,
+            travelerName: store.getUser()?.role === 'customer' ? store.getUser().name : 'Traveler'
         });
         store.clearTripDraft();
         window.location.hash = '/confirmation/' + booking.id;
@@ -284,9 +307,9 @@ function renderCheckout() {
 function renderConfirmation(id) {
     appView.innerHTML = `
         <div class="glass-panel card" style="text-align: center; padding: 4rem 2rem;">
-            <h2>🎉 Booking Confirmed!</h2>
-            <p>Your booking ID is <strong>${id}</strong></p>
-            <p>The Cultural Ambassador will contact you shortly.</p>
+            <h2>🎉 Booking Requested!</h2>
+            <p>Your booking ID is <strong>${escapeHtml(id)}</strong></p>
+            <p>Status: ${statusBadge('Pending')} — the Cultural Ambassador will review and accept your request shortly.</p>
             <a href="#/bookings" class="btn btn-primary" style="margin-top: 2rem;">View Bookings</a>
         </div>
     `;
@@ -301,11 +324,23 @@ function renderBookings() {
     ` : bookings.reverse().map(b => `
         <div class="glass-panel card" style="margin-bottom: 1rem;">
             <h3>Booking ID: ${b.id}</h3>
-            <p><strong>Guide:</strong> ${b.guide.name}</p>
-            <p><strong>Status:</strong> <span style="color: ${b.status === 'Cancelled' ? '#f87171' : '#4ade80'};">${b.status}</span></p>
+            <p><strong>Guide:</strong> ${escapeHtml(b.guide.name)}</p>
+            <p><strong>Destinations:</strong> ${b.stops.map(escapeHtml).join(', ')}</p>
+            <p><strong>Status:</strong> ${statusBadge(b.status)}</p>
             <p><strong>Date Booked:</strong> ${new Date(b.dateCreated).toLocaleDateString()}</p>
             <p><strong>Total:</strong> ${formatIDR(b.cost.total)}</p>
-            ${b.status !== 'Cancelled' ? `<button class="btn btn-glass" onclick="cancelBkg('${b.id}')" style="margin-top: 1rem;">Cancel Booking</button>` : ''}
+            ${canTransition(b.status, 'Cancelled') ? `<button id="btn-cancel-${b.id}" class="btn btn-glass" onclick="cancelBkg('${b.id}')" style="margin-top: 1rem;">Cancel Booking</button>` : ''}
+            ${canReview(b) ? `
+                <div style="margin-top: 1.25rem;">
+                    <h4 style="margin-bottom: 0.5rem;">Rate your trip</h4>
+                    <select id="rv-rating-${b.id}" class="glass-panel" style="padding: 0.5rem;">
+                        ${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${stars(n)}</option>`).join('')}
+                    </select>
+                    <textarea id="rv-text-${b.id}" class="glass-panel" rows="3" maxlength="500" placeholder="Share your experience (min. 10 characters)" style="display: block; width: 100%; box-sizing: border-box; padding: 0.75rem; margin-top: 0.5rem;"></textarea>
+                    <p id="rv-err-${b.id}" style="color: #f87171; margin: 0.5rem 0 0;"></p>
+                    <button id="btn-review-${b.id}" class="btn btn-primary" onclick="submitReview('${b.id}')" style="margin-top: 0.5rem;">Submit Review</button>
+                </div>` : ''}
+            ${b.review ? `<p style="margin-top: 1rem;"><strong>Your review:</strong> <span style="color: #facc15;">${stars(b.review.rating)}</span><br>${escapeHtml(b.review.text)}</p>` : ''}
         </div>
     `).join('');
 
@@ -320,6 +355,26 @@ window.cancelBkg = (id) => {
         store.cancelBooking(id);
         renderBookings();
     }
+};
+
+window.submitReview = (id) => {
+    const review = {
+        rating: parseInt(document.getElementById(`rv-rating-${id}`).value, 10),
+        text: document.getElementById(`rv-text-${id}`).value,
+    };
+    const check = validateReview(review);
+    if (!check.valid) {
+        document.getElementById(`rv-err-${id}`).textContent = check.errors.join('. ');
+        return;
+    }
+    store.reviewBooking(id, review);
+    renderBookings();
+};
+
+window.guideSetStatus = (id, status) => {
+    if (status === 'Declined' && !confirm('Decline this booking request?')) return;
+    store.setBookingStatus(id, status);
+    renderProfile();
 };
 
 function renderProfile() {
@@ -354,12 +409,19 @@ function renderProfile() {
                 <button id="btn-logout" class="btn btn-glass" style="margin-top: 1rem;">Logout</button>
             </div>
             <h3>Received Bookings</h3>
-            ${b.length === 0 ? '<p>No bookings yet.</p>' : b.map(bk => `
-                <div class="glass-panel card">
+            ${b.length === 0 ? '<p>No bookings yet.</p>' : b.slice().reverse().map(bk => `
+                <div class="glass-panel card" style="margin-bottom: 1rem;">
                     <p><strong>ID:</strong> ${bk.id}</p>
-                    <p><strong>Status:</strong> ${bk.status}</p>
-                    <p><strong>Pax:</strong> ${bk.pax} | <strong>Stops:</strong> ${bk.stops.length}</p>
+                    <p><strong>Traveler:</strong> ${escapeHtml(bk.travelerName || 'Traveler')}</p>
+                    <p><strong>Status:</strong> ${statusBadge(bk.status)}</p>
+                    <p><strong>Pax:</strong> ${bk.pax} | <strong>Stops:</strong> ${bk.stops.map(escapeHtml).join(', ')}</p>
                     <p><strong>Earnings:</strong> ${formatIDR(bk.cost.subtotal)}</p>
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+                        ${canTransition(bk.status, 'Accepted') ? `<button id="btn-accept-${bk.id}" class="btn btn-primary" onclick="guideSetStatus('${bk.id}', 'Accepted')">Accept</button>` : ''}
+                        ${canTransition(bk.status, 'Declined') ? `<button id="btn-decline-${bk.id}" class="btn btn-glass" onclick="guideSetStatus('${bk.id}', 'Declined')">Decline</button>` : ''}
+                        ${canTransition(bk.status, 'Completed') ? `<button id="btn-complete-${bk.id}" class="btn btn-primary" onclick="guideSetStatus('${bk.id}', 'Completed')">Mark as Completed</button>` : ''}
+                    </div>
+                    ${bk.review ? `<p style="margin-top: 1rem;"><strong>Review:</strong> <span style="color: #facc15;">${stars(bk.review.rating)}</span> ${escapeHtml(bk.review.text)}</p>` : ''}
                 </div>
             `).join('')}
         `;
