@@ -3,27 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jejak Nusantara</title>
-    <!-- Use Google Fonts Inter for modern typography -->
+    <title>Jejak Nusantara — Travel Indonesia with Local Cultural Ambassadors</title>
+    <meta name="description" content="Book verified local Cultural Ambassadors in Bali, Yogyakarta, Jakarta and Toraja. Pick your own destinations, see transparent prices, and experience authentic Indonesia.">
+    <meta name="theme-color" content="#0d0907">
+    <meta property="og:title" content="Jejak Nusantara — Walk Indonesia with those who live it">
+    <meta property="og:description" content="Curated local guides, flexible custom trips, transparent pricing.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://assets.mixkit.co">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body data-route="home">
 
-    <nav class="glass-nav">
-        <a href="#/" class="nav-brand">Jejak Nusantara</a>
-        <div class="nav-links">
-            <a href="#/explore">Explore</a>
-            <a href="#/bookings">My Bookings</a>
-            <a href="#/profile">Profile</a>
+    <nav class="glass-nav" id="site-nav" aria-label="Main">
+        <a href="#/" class="nav-brand" id="nav-brand"><span class="brand-mark">✦</span> Jejak Nusantara</a>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+        <div class="nav-links" id="nav-links">
+            <a href="#/" data-nav="home" id="nav-home">Home</a>
+            <a href="#/explore" data-nav="explore" id="nav-explore">Explore</a>
+            <a href="#/bookings" data-nav="bookings" id="nav-bookings">My Bookings</a>
+            <a href="#/profile" data-nav="profile" id="nav-profile">Profile</a>
         </div>
     </nav>
 
     <main id="app-view">
         <!-- Content injected by app.js -->
     </main>
+
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div>
+                <a href="#/" class="nav-brand" style="margin-bottom: 1rem;"><span class="brand-mark">✦</span> Jejak Nusantara</a>
+                <p>Connecting curious travelers with verified local Cultural Ambassadors across the Indonesian archipelago.</p>
+            </div>
+            <div>
+                <h4>Discover</h4>
+                <a href="#/explore">Find a Guide</a>
+                <a href="#/explore">Destinations</a>
+                <a href="#/bookings">My Bookings</a>
+            </div>
+            <div>
+                <h4>Ambassadors</h4>
+                <a href="#/profile">Guide Login</a>
+                <a href="#/profile">Become a Guide</a>
+            </div>
+            <div>
+                <h4>Promo</h4>
+                <a href="#/explore">BUDAYA2026 · 10% off</a>
+                <a href="#/explore">NUSANTARA50 · Rp50k off</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2026 Jejak Nusantara · Group 4 prototype</span>
+            <span>Videos: Mixkit (free license) · Photos: Unsplash</span>
+        </div>
+    </footer>
+
+    <div class="modal" id="video-modal" role="dialog" aria-modal="true" aria-label="Video player">
+        <div class="modal-inner">
+            <video id="modal-video" controls playsinline></video>
+            <div class="modal-caption">
+                <h3 id="modal-title"></h3>
+                <button class="modal-close" id="modal-close" aria-label="Close video">✕</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="js/app.js"></script>
 </body>

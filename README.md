@@ -12,10 +12,15 @@ Open `http://localhost:3000` in your browser.
 
 ## Testing
 
-Run unit tests for business logic using the native Node.js test runner:
+Run unit tests (business logic, booking lifecycle, reviews, store) using the native Node.js test runner:
 ```bash
-node --test tests/logic.test.js
+node --test tests/logic.test.js tests/booking.test.js
 ```
+
+## Booking flow
+
+`Pending` → guide **Accepts** / **Declines** → `Accepted` → guide **Marks as Completed** → traveler leaves a review (1–5 stars, 10–500 chars), which appears on the guide's profile.
+Travelers can cancel while `Pending` or `Accepted`. Use *Profile → Login as Customer / Login as Guide* to switch roles.
 
 ## Deployment
 
